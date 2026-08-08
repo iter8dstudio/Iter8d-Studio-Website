@@ -53,7 +53,7 @@ In Supabase project settings → API:
 ## Step 4 — Update admin.html
 Find this line in admin.html:
 ```
-var ADMIN_PASS = 'iter8d2026';
+var ADMIN_PASS = 'iter8dStudio2026';
 ```
 
 Add these two lines above it:
@@ -68,7 +68,7 @@ Then replace the getPosts/setPosts functions with Supabase API calls.
 ## Step 5 — Change Admin Password
 Also in admin.html, change:
 ```
-var ADMIN_PASS = 'iter8d2026';
+var ADMIN_PASS = 'iter8dStudio2026';
 ```
 To something private before uploading to Hostinger.
 
