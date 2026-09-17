@@ -152,3 +152,39 @@ if (filterBtns.length) {
     });
   });
 }
+
+
+// FORM SUBMIT — Web3Forms
+if (mform && sbtn) {
+  mform.addEventListener('submit', function(e) {
+    e.preventDefault();
+    sbtn.textContent = 'Sending...';
+    sbtn.disabled = true;
+    var data = new FormData(mform);
+    data.append('access_key', '50ec8fa5-96dc-41de-9fde-a5222ad75546');
+    data.append('subject', 'New Project Enquiry — iter8d Studio');
+    data.append('from_name', 'iter8d Studio Website');
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      body: data
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.success) {
+        sbtn.textContent = 'Sent! Redirecting you to book a discovery call...';
+        sbtn.style.background = '#2a7a3a';
+        mform.reset();
+        setTimeout(function() {
+          window.open('https://calendly.com/iter8dstudio/30min', '_blank');
+        }, 1500);
+      } else {
+        throw new Error('failed');
+      }
+    })
+    .catch(function() {
+      sbtn.textContent = 'Something went wrong. Please email us directly.';
+      sbtn.style.background = '#c0392b';
+      sbtn.disabled = false;
+    });
+  });
+}
