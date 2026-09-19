@@ -61,10 +61,22 @@ function openModal() {
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
+
 function closeModal() {
   if (!overlay) return;
   overlay.classList.remove('open');
   document.body.style.overflow = '';
+  // Reset modal back to form after closing
+  setTimeout(function() {
+    var successScreen = document.getElementById('modalSuccess');
+    if (successScreen) successScreen.style.display = 'none';
+    if (mform) mform.style.display = '';
+    if (sbtn) {
+      sbtn.textContent = 'Send to iter8d Studio \u2192';
+      sbtn.style.background = '';
+      sbtn.disabled = false;
+    }
+  }, 400);
 }
 
 document.querySelectorAll('[data-modal="project"]').forEach(function(btn) {
@@ -74,66 +86,109 @@ if (closeBtn) closeBtn.addEventListener('click', closeModal);
 if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
 
-// ── FORM SUBMIT — Web3Forms + Calendly redirect ───────────────────────────────
+// ── INJECT SUCCESS SCREEN INTO MODAL ─────────────────────────────────────────
+(function() {
+  var box = document.querySelector('.modal-box');
+  if (!box) return;
+
+  var successDiv = document.createElement('div');
+  successDiv.id = 'modalSuccess';
+  successDiv.style.cssText = [
+    'display:none',
+    'flex-direction:column',
+    'align-items:center',
+    'justify-content:center',
+    'text-align:center',
+    'padding:40px 20px',
+    'min-height:320px'
+  ].join(';');
+
+  successDiv.innerHTML = [
+    '<div style="width:72px;height:72px;border-radius:50%;background:#E8F5E9;display:flex;align-items:center;justify-content:center;margin:0 auto 28px;">',
+      '<svg width="36" height="36" viewBox="0 0 36 36" fill="none">',
+        '<path d="M7 18l8 8L29 10" stroke="#2a7a3a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+      '</svg>',
+    '</div>',
+    '<h2 style="font-family:Space Grotesk,sans-serif;font-size:26px;font-weight:700;color:#1A1A1A;letter-spacing:-0.02em;margin-bottom:12px;">',
+      'Message sent!',
+    '</h2>',
+    '<p style="font-size:16px;color:#666;line-height:1.65;max-width:340px;margin:0 auto 8px;">',
+      'We have received your enquiry. Redirecting you to book a discovery call\u2026',
+    '</p>',
+    '<p style="font-size:13px;color:#AAAAAA;margin-bottom:32px;">',
+      'You will be redirected in <span id="countdownNum">3</span> seconds',
+    '</p>',
+    '<div style="width:100%;height:3px;background:#F0F0EE;border-radius:2px;overflow:hidden;">',
+      '<div id="progressBar" style="height:100%;width:0%;background:#E8650A;border-radius:2px;transition:width 3s linear;"></div>',
+    '</div>'
+  ].join('');
+
+  box.appendChild(successDiv);
+})();
+
+// ── FORM SUBMIT — Web3Forms + Success Screen + Calendly ───────────────────────
 if (mform && sbtn) {
   mform.addEventListener('submit', function(e) {
     e.preventDefault();
 
-    // Basic validation
-    var name  = mform.querySelector('[name="name"]');
-    var email = mform.querySelector('[name="email"]');
-    if (!name || !name.value.trim()) { alert('Please enter your name.'); return; }
-    if (!email || !email.value.trim()) { alert('Please enter your email.'); return; }
+    // Validation
+    var nameField  = mform.querySelector('[name="name"]');
+    var emailField = mform.querySelector('[name="email"]');
+    if (!nameField || !nameField.value.trim()) { alert('Please enter your name.'); return; }
+    if (!emailField || !emailField.value.trim()) { alert('Please enter your email address.'); return; }
 
-    sbtn.textContent = 'Sending...';
+    sbtn.textContent = 'Sending\u2026';
     sbtn.disabled = true;
 
     var formData = new FormData(mform);
-
-    // Ensure access key is included
     if (!formData.get('access_key')) {
       formData.append('access_key', '50ec8fa5-96dc-41de-9fde-a5222ad75546');
     }
-    formData.set('subject', 'New Project Enquiry — iter8d Studio');
+    formData.set('subject', 'New Project Enquiry \u2014 iter8d Studio');
     formData.set('from_name', 'iter8d Studio Website');
 
     fetch('https://api.web3forms.com/submit', {
       method: 'POST',
       body: formData
     })
-    .then(function(response) { return response.json(); })
+    .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success) {
-        // Success state
-        sbtn.textContent = '✓ Sent! Taking you to book a call...';
-        sbtn.style.background = '#2a7a3a';
-        mform.reset();
 
-        // Close modal and redirect to Calendly after 2 seconds
-        setTimeout(function() {
-          closeModal();
-          window.location.href = 'https://calendly.com/iter8dstudio/30min';
-        }, 2000);
+        // Hide form, show success screen
+        mform.style.display = 'none';
+        var successScreen = document.getElementById('modalSuccess');
+        if (successScreen) {
+          successScreen.style.display = 'flex';
+          // Start progress bar
+          setTimeout(function() {
+            var bar = document.getElementById('progressBar');
+            if (bar) bar.style.width = '100%';
+          }, 50);
+          // Countdown
+          var count = 3;
+          var countEl = document.getElementById('countdownNum');
+          var timer = setInterval(function() {
+            count--;
+            if (countEl) countEl.textContent = count;
+            if (count <= 0) {
+              clearInterval(timer);
+              closeModal();
+              mform.reset();
+              window.location.href = 'https://calendly.com/iter8dstudio/30min';
+            }
+          }, 1000);
+        }
 
       } else {
-        // Web3Forms returned an error
-        console.error('Web3Forms error:', data);
-        sbtn.textContent = 'Failed. Try emailing us directly.';
+        // Error
+        sbtn.textContent = 'Failed \u2014 please email us directly.';
         sbtn.style.background = '#c0392b';
         sbtn.disabled = false;
-        // Fallback — open mailto
-        var n  = formData.get('name') || '';
-        var em = formData.get('email') || '';
-        var sv = formData.get('service') || '';
-        var mg = formData.get('message') || '';
-        window.location.href = 'mailto:studio@iter8dstudio.com?subject=New Project Enquiry from '
-          + encodeURIComponent(n) + '&body='
-          + encodeURIComponent('Name: ' + n + '\nEmail: ' + em + '\nService: ' + sv + '\n\nMessage:\n' + mg);
       }
     })
-    .catch(function(err) {
-      console.error('Network error:', err);
-      sbtn.textContent = 'Network error. Please email us directly.';
+    .catch(function() {
+      sbtn.textContent = 'Network error \u2014 please email us directly.';
       sbtn.style.background = '#c0392b';
       sbtn.disabled = false;
     });
