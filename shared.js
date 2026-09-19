@@ -1,40 +1,27 @@
-/* iter8d Studio — shared.js */
+// iter8d Studio — shared.js
 
-// ── NAV SCROLL ──────────────────────────────────────
+// ── NAV SCROLL ──────────────────────────────────────────────────────────────
 var navbar = document.getElementById('navbar');
-var isHeroDark = false;
-
 if (navbar) {
-  // Detect if this page has a dark hero
-  var darkHero = document.querySelector(
-    '.page-hero, .about-hero, .services-hero, .work-hero, .blog-hero, .contact-hero, .process-hero'
-  );
-  if (darkHero) {
-    navbar.classList.add('hero-dark');
-    isHeroDark = true;
-  }
-
+  var darkHero = document.querySelector('.page-hero, .about-hero, .services-hero, .work-hero, .blog-hero, .contact-hero, .process-hero');
+  if (darkHero) navbar.classList.add('hero-dark');
   window.addEventListener('scroll', function() {
-    var scrolled = window.scrollY > 60;
-    navbar.classList.toggle('scrolled', scrolled);
+    navbar.classList.toggle('scrolled', window.scrollY > 60);
   });
 }
 
-// ── SCROLL REVEAL ────────────────────────────────────
+// ── SCROLL REVEAL ────────────────────────────────────────────────────────────
 var reveals = document.querySelectorAll('.reveal');
 if (reveals.length) {
   var ro = new IntersectionObserver(function(entries) {
     entries.forEach(function(e) {
-      if (e.isIntersecting) {
-        e.target.classList.add('visible');
-        ro.unobserve(e.target);
-      }
+      if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); }
     });
   }, { threshold: 0.07, rootMargin: '0px 0px -40px 0px' });
   reveals.forEach(function(el) { ro.observe(el); });
 }
 
-// ── HAMBURGER / MOBILE NAV ───────────────────────────
+// ── HAMBURGER ────────────────────────────────────────────────────────────────
 var hbg   = document.getElementById('hamburger');
 var nmenu = document.getElementById('nav-menu');
 if (hbg && nmenu) {
@@ -43,8 +30,8 @@ if (hbg && nmenu) {
     hbg.classList.toggle('active', isOpen);
     document.body.classList.toggle('nav-open', isOpen);
   });
-  nmenu.querySelectorAll('a').forEach(function(link) {
-    link.addEventListener('click', function() {
+  nmenu.querySelectorAll('a').forEach(function(l) {
+    l.addEventListener('click', function() {
       nmenu.classList.remove('open');
       hbg.classList.remove('active');
       document.body.classList.remove('nav-open');
@@ -52,19 +39,18 @@ if (hbg && nmenu) {
   });
 }
 
-// ── ACTIVE NAV LINK ──────────────────────────────────
+// ── ACTIVE NAV LINK ──────────────────────────────────────────────────────────
 (function() {
   var page = window.location.pathname.split('/').pop() || 'index.html';
-  if (!page) page = 'index.html';
   document.querySelectorAll('.nav-links a').forEach(function(link) {
     var href = link.getAttribute('href') || '';
-    if (href === page || (page === '' && href === 'index.html')) {
+    if (href === page || href + '.html' === page || (page === '' && href === 'index')) {
       link.classList.add('active');
     }
   });
 })();
 
-// ── PROJECT MODAL ────────────────────────────────────
+// ── MODAL ────────────────────────────────────────────────────────────────────
 var overlay  = document.getElementById('projectModal');
 var closeBtn = document.getElementById('modalClose');
 var mform    = document.getElementById('projectForm');
@@ -85,50 +71,86 @@ document.querySelectorAll('[data-modal="project"]').forEach(function(btn) {
   btn.addEventListener('click', function(e) { e.preventDefault(); openModal(); });
 });
 if (closeBtn) closeBtn.addEventListener('click', closeModal);
-if (overlay)  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
 
-// ── FORM SUBMIT (Formspree + mailto fallback) ────────
+// ── FORM SUBMIT — Web3Forms + Calendly redirect ───────────────────────────────
 if (mform && sbtn) {
   mform.addEventListener('submit', function(e) {
     e.preventDefault();
+
+    // Basic validation
+    var name  = mform.querySelector('[name="name"]');
+    var email = mform.querySelector('[name="email"]');
+    if (!name || !name.value.trim()) { alert('Please enter your name.'); return; }
+    if (!email || !email.value.trim()) { alert('Please enter your email.'); return; }
+
     sbtn.textContent = 'Sending...';
     sbtn.disabled = true;
-    var data = new FormData(mform);
-    fetch(mform.action, {
-      method: 'POST', body: data, headers: { 'Accept': 'application/json' }
-    }).then(function(r) {
-      if (r.ok) {
-        sbtn.textContent = 'Sent! We will be in touch within 24 hours.';
+
+    var formData = new FormData(mform);
+
+    // Ensure access key is included
+    if (!formData.get('access_key')) {
+      formData.append('access_key', '50ec8fa5-96dc-41de-9fde-a5222ad75546');
+    }
+    formData.set('subject', 'New Project Enquiry — iter8d Studio');
+    formData.set('from_name', 'iter8d Studio Website');
+
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      if (data.success) {
+        // Success state
+        sbtn.textContent = '✓ Sent! Taking you to book a call...';
         sbtn.style.background = '#2a7a3a';
         mform.reset();
-      } else { throw new Error('server'); }
-    }).catch(function() {
-      var n  = data.get('name')    || '';
-      var em = data.get('email')   || '';
-      var sv = data.get('service') || '';
-      var mg = data.get('message') || '';
-      var body = encodeURIComponent('Name: ' + n + '\nEmail: ' + em + '\nService: ' + sv + '\n\nMessage:\n' + mg);
-      window.location.href = 'mailto:studio@iter8dstudio.com?subject=New Project Enquiry from ' + encodeURIComponent(n) + '&body=' + body;
-      sbtn.textContent = 'Send to iter8d Studio \u2192';
+
+        // Close modal and redirect to Calendly after 2 seconds
+        setTimeout(function() {
+          closeModal();
+          window.location.href = 'https://calendly.com/iter8dstudio/30min';
+        }, 2000);
+
+      } else {
+        // Web3Forms returned an error
+        console.error('Web3Forms error:', data);
+        sbtn.textContent = 'Failed. Try emailing us directly.';
+        sbtn.style.background = '#c0392b';
+        sbtn.disabled = false;
+        // Fallback — open mailto
+        var n  = formData.get('name') || '';
+        var em = formData.get('email') || '';
+        var sv = formData.get('service') || '';
+        var mg = formData.get('message') || '';
+        window.location.href = 'mailto:studio@iter8dstudio.com?subject=New Project Enquiry from '
+          + encodeURIComponent(n) + '&body='
+          + encodeURIComponent('Name: ' + n + '\nEmail: ' + em + '\nService: ' + sv + '\n\nMessage:\n' + mg);
+      }
+    })
+    .catch(function(err) {
+      console.error('Network error:', err);
+      sbtn.textContent = 'Network error. Please email us directly.';
+      sbtn.style.background = '#c0392b';
       sbtn.disabled = false;
     });
   });
 }
 
-// ── SERVICES ACCORDION ───────────────────────────────
+// ── SERVICES ACCORDION ────────────────────────────────────────────────────────
 document.querySelectorAll('.svc-header').forEach(function(header) {
   header.addEventListener('click', function() {
     var item = this.closest('.svc-item');
     var isOpen = item.classList.contains('open');
-    // Close all
     document.querySelectorAll('.svc-item').forEach(function(el) { el.classList.remove('open'); });
-    // Toggle clicked
     if (!isOpen) item.classList.add('open');
   });
 });
 
-// ── WORK FILTERS ─────────────────────────────────────
+// ── WORK FILTERS ──────────────────────────────────────────────────────────────
 var filterBtns = document.querySelectorAll('.filter-btn');
 if (filterBtns.length) {
   filterBtns.forEach(function(btn) {
@@ -142,49 +164,9 @@ if (filterBtns.length) {
         } else {
           var cat = card.querySelector('.fw-cat, .wk-cat');
           var cardCat = cat ? cat.textContent.trim() : '';
-          if (cardCat.toLowerCase().indexOf(filter.toLowerCase()) >= 0) {
-            card.classList.remove('hidden');
-          } else {
-            card.classList.add('hidden');
-          }
+          card.classList.toggle('hidden', cardCat.toLowerCase().indexOf(filter.toLowerCase()) < 0);
         }
       });
-    });
-  });
-}
-
-
-// FORM SUBMIT — Web3Forms
-if (mform && sbtn) {
-  mform.addEventListener('submit', function(e) {
-    e.preventDefault();
-    sbtn.textContent = 'Sending...';
-    sbtn.disabled = true;
-    var data = new FormData(mform);
-    data.append('access_key', '50ec8fa5-96dc-41de-9fde-a5222ad75546');
-    data.append('subject', 'New Project Enquiry — iter8d Studio');
-    data.append('from_name', 'iter8d Studio Website');
-    fetch('https://api.web3forms.com/submit', {
-      method: 'POST',
-      body: data
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(res) {
-      if (res.success) {
-        sbtn.textContent = 'Sent! Redirecting you to book a discovery call...';
-        sbtn.style.background = '#2a7a3a';
-        mform.reset();
-        setTimeout(function() {
-          window.open('https://calendly.com/iter8dstudio/30min', '_blank');
-        }, 1500);
-      } else {
-        throw new Error('failed');
-      }
-    })
-    .catch(function() {
-      sbtn.textContent = 'Something went wrong. Please email us directly.';
-      sbtn.style.background = '#c0392b';
-      sbtn.disabled = false;
     });
   });
 }
