@@ -16,7 +16,6 @@ function sb_get(string $query): ?array {
         ]);
         $body = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
         if ($body === false || $code !== 200) return null;
     } else {
         $ctx  = stream_context_create(['http' => ['header' => 'apikey: ' . SB_KEY, 'timeout' => 6]]);
