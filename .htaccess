@@ -1,6 +1,17 @@
 Options +FollowSymLinks
 RewriteEngine On
 
+# Never serve the git folder or internal template files
+RedirectMatch 404 ^/\.git
+RewriteRule ^post-template\.html$ - [F,L]
+
+# Blog posts: /blog/my-article  ->  post.php
+RewriteRule ^blog/$ /blog [R=301,L]
+RewriteRule ^blog/([A-Za-z0-9-]+)/?$ post.php?slug=$1 [L,QSA]
+RewriteRule ^post/?$ post.php [L,QSA]
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+# Clean URLs for the other pages (about.html -> /about)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([^\.]+)$ $1.html [NC,L]

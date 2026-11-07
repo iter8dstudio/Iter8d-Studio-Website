@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://iter8dstudio.com/sitemap.xml

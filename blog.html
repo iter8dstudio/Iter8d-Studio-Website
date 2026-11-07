@@ -138,11 +138,11 @@ function renderBlog(cat) {
   if (!posts.length) { feat.innerHTML = ''; grid.innerHTML = ''; label.style.display = 'none'; state.style.display = 'block'; state.textContent = 'No posts in this category yet.'; return; }
   state.style.display = 'none';
   var f = posts[0];
-  feat.innerHTML = '<a href="post?id=' + encodeURIComponent(f.id) + '" class="blog-featured"><div class="bf-visual">' + thumbSvg(f.category) + '</div><div class="bf-body"><div class="bf-tag">' + escHtml(f.category) + '</div><h2 class="bf-title">' + escHtml(f.title) + '</h2><p class="bf-excerpt">' + escHtml(f.excerpt) + '</p><div class="bf-meta">' + fmtDate(f.date) + ' &middot; ' + escHtml(f.readTime) + '</div><span class="bf-cta">Read article &rarr;</span></div></a>';
+  feat.innerHTML = '<a href="' + postUrl(f) + '" class="blog-featured"><div class="bf-visual">' + thumbSvg(f.category) + '</div><div class="bf-body"><div class="bf-tag">' + escHtml(f.category) + '</div><h2 class="bf-title">' + escHtml(f.title) + '</h2><p class="bf-excerpt">' + escHtml(f.excerpt) + '</p><div class="bf-meta">' + fmtDate(f.date) + ' &middot; ' + escHtml(f.readTime) + '</div><span class="bf-cta">Read article &rarr;</span></div></a>';
   var rest = posts.slice(1);
   label.style.display = rest.length ? 'block' : 'none';
   grid.innerHTML = rest.map(function(p) {
-    return '<a href="post?id=' + encodeURIComponent(p.id) + '" class="blog-card"><div class="bc-thumb">' + thumbSvg(p.category) + '<span class="bc-cat-badge">' + escHtml(p.category) + '</span></div><div class="bc-body"><div class="bc-meta">' + fmtDate(p.date) + ' &middot; ' + escHtml(p.readTime) + '</div><h3 class="bc-title">' + escHtml(p.title) + '</h3><p class="bc-excerpt">' + escHtml(p.excerpt) + '</p><span class="bc-read-link">Read article &rarr;</span></div></a>';
+    return '<a href="' + postUrl(p) + '" class="blog-card"><div class="bc-thumb">' + thumbSvg(p.category) + '<span class="bc-cat-badge">' + escHtml(p.category) + '</span></div><div class="bc-body"><div class="bc-meta">' + fmtDate(p.date) + ' &middot; ' + escHtml(p.readTime) + '</div><h3 class="bc-title">' + escHtml(p.title) + '</h3><p class="bc-excerpt">' + escHtml(p.excerpt) + '</p><span class="bc-read-link">Read article &rarr;</span></div></a>';
   }).join('');
 }
 document.querySelectorAll('.blog-filter-btn').forEach(function(b) {

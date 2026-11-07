@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<base href="/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blog Post &#8212; iter8d Studio</title>
-<meta name="description" content="Read the latest design insights from iter8d Studio.">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESC}}">
+{{HEAD_EXTRA}}
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -73,10 +75,10 @@
   </div>
 </div>
 
-<section class="post-hero page-hero"><div class="post-hero-meta"><span class="post-cat-tag" id="postCat">Design</span><span class="post-date-hero" id="postDate"></span></div>
-  <h1 class="post-title-hero" id="postTitle">Loading&hellip;</h1></section>
+<section class="post-hero page-hero"><div class="post-hero-meta"><span class="post-cat-tag">{{CATEGORY}}</span><span class="post-date-hero">{{DATE}}</span></div>
+  <h1 class="post-title-hero">{{H1}}</h1></section>
 <section class="post-section"><div class="post-inner">
-  <article class="post-content" id="postContent"><p>Loading&hellip;</p></article>
+  <article class="post-content">{{CONTENT}}</article>
   <aside>
     <a href="blog" class="sidebar-back">&larr; Back to Blog</a>
     <div class="sidebar-box"><p class="sidebar-box-title">About iter8d Studio</p><p style="font-size:14px;color:var(--midgray);line-height:1.65">Full-spectrum design studio. UI/UX, web design, industrial design, 3D rendering, motion &amp; illustration, and CAD &#8212; under one roof.</p></div>
@@ -102,28 +104,5 @@
     </div></div>
 </div></footer>
 <script src="shared.js"></script>
-<script src="blog-data.js"></script>
-<script>
-var pid = new URLSearchParams(window.location.search).get('id');
-function setMeta(sel, attr, val) { var el = document.querySelector(sel); if (el) el.setAttribute(attr, val); }
-getPostById(pid || '').then(function(post) {
-  if (!post) {
-    document.getElementById('postTitle').textContent = 'Post not found.';
-    document.getElementById('postContent').innerHTML = '<p>This article could not be found. <a href="blog">Back to the blog</a>.</p>';
-    return;
-  }
-  document.title = post.title + ' \u2014 iter8d Studio';
-  var desc = post.meta || post.excerpt || '';
-  setMeta('meta[name="description"]', 'content', desc);
-  document.getElementById('postTitle').textContent = post.title;
-  document.getElementById('postCat').textContent = post.category;
-  document.getElementById('postDate').textContent = fmtDate(post.date) + ' \u00b7 ' + post.readTime;
-  document.getElementById('postContent').innerHTML = post.content;
-  var ld = document.createElement('script'); ld.type = 'application/ld+json';
-  ld.text = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: post.title, description: desc, datePublished: post.date,
-    author: { '@type': 'Organization', name: 'iter8d Studio' }, publisher: { '@type': 'Organization', name: 'iter8d Studio' } });
-  document.head.appendChild(ld);
-});
-</script>
 </body>
 </html>
