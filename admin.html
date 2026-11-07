@@ -134,6 +134,7 @@ body { font-family:"Inter",sans-serif;background:#0D0D0D;color:white;-webkit-fon
       <div class="editor-card">
         <input type="hidden" id="editId">
         <div class="egroup"><label class="elabel">Post Title *</label><input class="einput" type="text" id="eTitle" placeholder="Write a compelling title..."></div>
+        <div class="egroup"><label class="elabel">Web address (URL slug)</label><input class="einput" type="text" id="eSlug" placeholder="filled in automatically from the title"><p style="font-size:12px;color:rgba(255,255,255,0.3);line-height:1.6">Appears as iter8dstudio.com/blog/<b>your-slug</b>. Use lowercase words and hyphens. Do not change it after publishing, or old links will break.</p></div>
         <div class="erow">
           <div class="egroup" style="margin-bottom:0"><label class="elabel">Category</label>
             <select class="eselect" id="eCat"><option>Design</option><option>UI/UX</option><option>Industrial Design</option><option>3D Rendering</option><option>Motion</option><option>CAD</option><option>Business</option><option>Process</option></select></div>
@@ -244,7 +245,8 @@ function renderPosts() {
   list.innerHTML = POSTS.map(function(p) {
     var d = new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     var pubBtn = p.status === 'published' ? '<button class="pabtn pabtn-unpub" onclick="toggleStatus(\'' + p.id + '\')">Unpublish</button>' : '<button class="pabtn pabtn-pub" onclick="toggleStatus(\'' + p.id + '\')">Publish</button>';
-    var view = p.status === 'published' ? '<a class="pabtn pabtn-edit" style="text-decoration:none" target="_blank" href="post?id=' + encodeURIComponent(p.id) + '">View</a>' : '';
+    var vurl = p.slug ? ('/blog/' + encodeURIComponent(p.slug)) : ('/post?id=' + encodeURIComponent(p.id));
+    var view = p.status === 'published' ? '<a class="pabtn pabtn-edit" style="text-decoration:none" target="_blank" href="' + vurl + '">View</a>' : '';
     return '<div class="post-row"><div><div class="pr-title">' + esc(p.title) + '</div><div class="pr-meta">' + esc(p.category) + ' &nbsp;&bull;&nbsp; ' + d + '</div></div><span class="badge badge-' + (p.status === 'published' ? 'pub' : 'draft') + '">' + p.status + '</span><div class="pr-actions">' + view + '<button class="pabtn pabtn-edit" onclick="goEditor(\'' + p.id + '\')">Edit</button>' + pubBtn + '<button class="pabtn pabtn-del" onclick="delPost(\'' + p.id + '\')">Delete</button></div></div>';
   }).join('');
 }
@@ -253,14 +255,15 @@ function goEditor(id) {
   showPanel('editor'); document.getElementById('editorHeading').textContent = id ? 'Edit Post' : 'New Post';
 }
 function resetEditor() {
-  ['editId', 'eTitle', 'eExcerpt', 'eMeta'].forEach(function(i) { document.getElementById(i).value = ''; });
-  document.getElementById('eContent').innerHTML = ''; document.getElementById('eCat').value = 'Design';
+  ['editId', 'eTitle', 'eSlug', 'eExcerpt', 'eMeta'].forEach(function(i) { document.getElementById(i).value = ''; });
+  document.getElementById('eContent').innerHTML = ''; document.getElementById('eCat').value = 'Design'; slugTouched = false;
 }
 function loadForEdit(id) {
   var p = POSTS.filter(function(x) { return x.id === id; })[0]; if (!p) return;
   document.getElementById('editId').value = id; document.getElementById('eTitle').value = p.title;
   document.getElementById('eCat').value = p.category || 'Design'; document.getElementById('eExcerpt').value = p.excerpt || '';
   document.getElementById('eMeta').value = p.meta || ''; document.getElementById('eContent').innerHTML = p.content || '';
+  document.getElementById('eSlug').value = p.slug || ''; slugTouched = true;
 }
 function savePost(status) {
   var title = document.getElementById('eTitle').value.trim();
@@ -268,15 +271,17 @@ function savePost(status) {
   var content = document.getElementById('eContent').innerHTML.trim();
   if (!content) { toast('Please write some content.', '#e05555'); return; }
   var id = document.getElementById('editId').value || ('post_' + Date.now());
+  var slug = slugify(document.getElementById('eSlug').value) || slugify(title) || id;
+  document.getElementById('eSlug').value = slug;
   var existing = POSTS.filter(function(x) { return x.id === id; })[0];
   var words = content.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
-  var row = { id: id, title: title, status: status, category: document.getElementById('eCat').value,
+  var row = { id: id, title: title, slug: slug, status: status, category: document.getElementById('eCat').value,
     excerpt: document.getElementById('eExcerpt').value.trim(), meta: document.getElementById('eMeta').value.trim(), content: content,
     read_time: Math.max(1, Math.round(words / 200)) + ' min read', date: existing ? existing.date : new Date().toISOString(), updated: new Date().toISOString() };
   api('posts?on_conflict=id', { method: 'POST', body: JSON.stringify(row), prefer: 'resolution=merge-duplicates,return=minimal' })
     .then(function() { toast(status === 'published' ? 'Published! It is now live on the blog.' : 'Draft saved.', status === 'published' ? '#2a7a3a' : '#E8650A'); document.getElementById('editId').value = id; return loadPosts(); })
     .then(function() { if (status === 'published') showPanel('posts'); })
-    .catch(function(e) { toast('Save failed: ' + e.message, '#e05555'); });
+    .catch(function(e) { toast(/23505|duplicate/i.test(e.message) ? 'That web address (slug) is already used by another post. Please change it.' : 'Save failed: ' + e.message, '#e05555'); });
 }
 function toggleStatus(id) {
   var p = POSTS.filter(function(x) { return x.id === id; })[0]; if (!p) return;
@@ -294,6 +299,11 @@ function delPost(id) {
 function ef(cmd) { document.execCommand(cmd, false, null); document.getElementById('eContent').focus(); }
 function eb(tag) { document.execCommand('formatBlock', false, tag); document.getElementById('eContent').focus(); }
 function elink() { var url = prompt('Enter URL (include https://):'); if (url) document.execCommand('createLink', false, url); }
+
+var slugTouched = false;
+function slugify(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90).replace(/-+$/, ''); }
+document.getElementById('eTitle').addEventListener('input', function() { if (!slugTouched && !document.getElementById('editId').value) document.getElementById('eSlug').value = slugify(this.value); });
+document.getElementById('eSlug').addEventListener('input', function() { slugTouched = true; });
 
 loadSession();
 if (session && session.refresh_token) { showApp(); }
