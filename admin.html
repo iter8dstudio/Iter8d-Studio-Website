@@ -77,6 +77,13 @@ body { font-family:"Inter",sans-serif;background:#0D0D0D;color:white;-webkit-fon
 .btn-pub,.new-post-btn { background:var(--orange);color:white;padding:12px 28px;border:none;border-radius:4px;font-family:"Space Grotesk",sans-serif;font-size:14px;font-weight:600;cursor:pointer; }
 .btn-pub:hover,.new-post-btn:hover { background:#d45a08; }
 .notice { font-size:13px;color:rgba(255,255,255,0.4);line-height:1.7;max-width:560px;background:#1A1A1A;border-left:3px solid var(--orange);padding:14px 18px;border-radius:0 4px 4px 0; }
+.admin-sub { font-family:"Space Grotesk",sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin:30px 0 14px; }
+.top-head,.top-row { display:flex;align-items:center;gap:14px;padding:12px 22px; }
+.top-head { font-family:"Space Grotesk",sans-serif;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.3); }
+.top-row { background:#1A1A1A;border-radius:4px; }
+.top-title { flex:1;font-family:"Space Grotesk",sans-serif;font-size:14px;font-weight:600; }
+.top-num { width:78px;text-align:right;font-family:"Space Grotesk",sans-serif;font-size:14px; }
+.top-num.dim { color:rgba(255,255,255,0.45); }
 .toast { position:fixed;bottom:28px;right:28px;background:#1A1A1A;border:1px solid rgba(255,255,255,0.08);border-left:3px solid var(--orange);color:white;padding:13px 18px;border-radius:4px;font-family:"Space Grotesk",sans-serif;font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all 0.3s;z-index:9999;pointer-events:none; }
 .toast.show { opacity:1;transform:translateY(0); }
 @media (max-width:800px){ .admin-sidebar{position:static;width:100%;flex-direction:row;flex-wrap:wrap;padding:14px;} .sidebar-logo img{margin:0 16px 0 0;} .snav-logout{margin-top:0;margin-left:auto;} .snav{width:auto;} .admin-main{margin-left:0;padding:20px;} .admin-app.on{display:block !important;} .stats-grid,.erow{grid-template-columns:1fr;} .post-row{flex-wrap:wrap;} }
@@ -121,6 +128,15 @@ body { font-family:"Inter",sans-serif;background:#0D0D0D;color:white;-webkit-fon
         <div class="stat-c"><div class="stat-c-n" id="sPub">0</div><div class="stat-c-l">Published</div></div>
         <div class="stat-c"><div class="stat-c-n" id="sDraft">0</div><div class="stat-c-l">Drafts</div></div>
       </div>
+      <h2 class="admin-sub">Article views</h2>
+      <div class="stats-grid">
+        <div class="stat-c"><div class="stat-c-n" id="vw7">&ndash;</div><div class="stat-c-l">Last 7 days</div></div>
+        <div class="stat-c"><div class="stat-c-n" id="vw30">&ndash;</div><div class="stat-c-l">Last 30 days</div></div>
+        <div class="stat-c"><div class="stat-c-n" id="vwAll">&ndash;</div><div class="stat-c-l">All time</div></div>
+      </div>
+      <h2 class="admin-sub">Top posts</h2>
+      <div class="posts-list" id="topPosts"><p style="color:rgba(255,255,255,0.3);padding:20px;">Loading&hellip;</p></div>
+      <p style="font-size:12px;color:rgba(255,255,255,0.3);margin:12px 0 30px;line-height:1.6;">Counts article page loads from real visitors. Search-engine bots are excluded, and so is the View button in this admin. A visitor refreshing the page counts again.</p>
       <p class="notice">Posts are saved to your Supabase database. Anything you publish appears on the blog for every visitor straight away. The three starter articles are built into the site code and are not editable here.</p>
     </div>
 
@@ -231,7 +247,7 @@ function showPanel(name) {
   var nav = document.querySelector('.snav[data-p="' + name + '"]'); if (nav) nav.classList.add('active');
 }
 function loadPosts() {
-  return api('posts?select=*&order=date.desc').then(function(rows) { POSTS = rows || []; refreshStats(); renderPosts(); })
+  return api('posts?select=*&order=date.desc').then(function(rows) { POSTS = rows || []; refreshStats(); renderPosts(); return loadStats(); })
     .catch(function(e) { toast('Could not load posts: ' + e.message, '#e05555'); });
 }
 function refreshStats() {
@@ -246,8 +262,8 @@ function renderPosts() {
     var d = new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     var pubBtn = p.status === 'published' ? '<button class="pabtn pabtn-unpub" onclick="toggleStatus(\'' + p.id + '\')">Unpublish</button>' : '<button class="pabtn pabtn-pub" onclick="toggleStatus(\'' + p.id + '\')">Publish</button>';
     var vurl = p.slug ? ('/blog/' + encodeURIComponent(p.slug)) : ('/post?id=' + encodeURIComponent(p.id));
-    var view = p.status === 'published' ? '<a class="pabtn pabtn-edit" style="text-decoration:none" target="_blank" href="' + vurl + '">View</a>' : '';
-    return '<div class="post-row"><div><div class="pr-title">' + esc(p.title) + '</div><div class="pr-meta">' + esc(p.category) + ' &nbsp;&bull;&nbsp; ' + d + '</div></div><span class="badge badge-' + (p.status === 'published' ? 'pub' : 'draft') + '">' + p.status + '</span><div class="pr-actions">' + view + '<button class="pabtn pabtn-edit" onclick="goEditor(\'' + p.id + '\')">Edit</button>' + pubBtn + '<button class="pabtn pabtn-del" onclick="delPost(\'' + p.id + '\')">Delete</button></div></div>';
+    var view = p.status === 'published' ? '<a class="pabtn pabtn-edit" style="text-decoration:none" target="_blank" href="' + vurl + (vurl.indexOf('?') > -1 ? '&' : '?') + 'nc=1">View</a>' : '';
+    return '<div class="post-row"><div><div class="pr-title">' + esc(p.title) + '</div><div class="pr-meta">' + esc(p.category) + ' &nbsp;&bull;&nbsp; ' + d + viewsText(p.slug) + '</div></div><span class="badge badge-' + (p.status === 'published' ? 'pub' : 'draft') + '">' + p.status + '</span><div class="pr-actions">' + view + '<button class="pabtn pabtn-edit" onclick="goEditor(\'' + p.id + '\')">Edit</button>' + pubBtn + '<button class="pabtn pabtn-del" onclick="delPost(\'' + p.id + '\')">Delete</button></div></div>';
   }).join('');
 }
 function goEditor(id) {
@@ -299,6 +315,48 @@ function delPost(id) {
 function ef(cmd) { document.execCommand(cmd, false, null); document.getElementById('eContent').focus(); }
 function eb(tag) { document.execCommand('formatBlock', false, tag); document.getElementById('eContent').focus(); }
 function elink() { var url = prompt('Enter URL (include https://):'); if (url) document.execCommand('createLink', false, url); }
+
+var STATS = {}, TITLE_MAP = {}, SEED_LOADED = false;
+function viewsText(slug) {
+  var s = STATS[slug]; if (!s) return '';
+  return ' &nbsp;&bull;&nbsp; ' + s.views_7d + ' views (7d) &nbsp;&bull;&nbsp; ' + s.views_all + ' total';
+}
+function loadSeedTitles() {
+  if (SEED_LOADED) return Promise.resolve();
+  return fetch('/seed-posts.json').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
+    list.forEach(function(s) { TITLE_MAP[s.slug] = s.title; }); SEED_LOADED = true;
+  }).catch(function() {});
+}
+function loadStats() {
+  POSTS.forEach(function(p) { if (p.slug) TITLE_MAP[p.slug] = p.title; });
+  return loadSeedTitles().then(function() { return api('rpc/post_view_stats', { method: 'POST', body: '{}' }); })
+    .then(function(rows) {
+      STATS = {};
+      (rows || []).forEach(function(r) { STATS[r.slug] = { views_7d: +r.views_7d, views_30d: +r.views_30d, views_all: +r.views_all }; });
+      renderStats(); renderPosts();
+    })
+    .catch(function(e) {
+      var msg = /post_view_stats|PGRST202|404|schema cache/i.test(String(e.message))
+        ? 'Analytics are not set up yet. Run the analytics SQL in Supabase, then reload this page.'
+        : 'Could not load analytics: ' + esc(e.message);
+      document.getElementById('topPosts').innerHTML = '<p style="color:rgba(255,255,255,0.4);padding:20px;">' + msg + '</p>';
+    });
+}
+function renderStats() {
+  var t7 = 0, t30 = 0, tAll = 0, arr = [];
+  Object.keys(STATS).forEach(function(slug) { var s = STATS[slug]; t7 += s.views_7d; t30 += s.views_30d; tAll += s.views_all; arr.push({ slug: slug, s: s }); });
+  document.getElementById('vw7').textContent = t7;
+  document.getElementById('vw30').textContent = t30;
+  document.getElementById('vwAll').textContent = tAll;
+  arr.sort(function(a, b) { return (b.s.views_30d - a.s.views_30d) || (b.s.views_all - a.s.views_all); });
+  var top = arr.slice(0, 5);
+  document.getElementById('topPosts').innerHTML = top.length
+    ? '<div class="top-head"><span class="top-title">Post</span><span class="top-num">7 days</span><span class="top-num">30 days</span><span class="top-num">All time</span></div>' +
+      top.map(function(r) {
+        return '<div class="top-row"><span class="top-title">' + esc(TITLE_MAP[r.slug] || r.slug) + '</span><span class="top-num">' + r.s.views_7d + '</span><span class="top-num">' + r.s.views_30d + '</span><span class="top-num dim">' + r.s.views_all + '</span></div>';
+      }).join('')
+    : '<p style="color:rgba(255,255,255,0.3);padding:20px;">No views recorded yet. They appear here once visitors open your articles.</p>';
+}
 
 var slugTouched = false;
 function slugify(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90).replace(/-+$/, ''); }

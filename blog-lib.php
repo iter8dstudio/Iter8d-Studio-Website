@@ -58,3 +58,37 @@ function find_post(string $by, string $value, ?bool &$dbOk = null): ?array {
     }
     return null;
 }
+
+// ---- Basic view counting -------------------------------------------------
+function skip_view(): bool {
+    $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
+    if (strpos($host, 'localhost') === 0 || strpos($host, '127.0.0.1') === 0 || strpos($host, '[::1]') === 0) return true;
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') return true;
+    if (isset($_GET['nc'])) return true; // the admin "View" button adds ?nc=1 so your own checks are not counted
+    $purpose = strtolower((string)($_SERVER['HTTP_PURPOSE'] ?? $_SERVER['HTTP_SEC_PURPOSE'] ?? ''));
+    if (strpos($purpose, 'prefetch') !== false || strpos($purpose, 'preview') !== false) return true;
+    $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+    if ($ua === '') return true;
+    return (bool)preg_match('/bot|crawl|spider|slurp|facebookexternalhit|embedly|preview|headless|lighthouse|pingdom|uptime|monitor|whatsapp|curl|wget|python|httpclient|go-http|java\//i', $ua);
+}
+
+function record_view(string $slug): void {
+    if ($slug === '' || strlen($slug) > 120 || skip_view()) return;
+    $payload = json_encode(['slug' => $slug]);
+    $headers = ['apikey: ' . SB_KEY, 'Content-Type: application/json', 'Prefer: return=minimal'];
+    if (function_exists('curl_init')) {
+        $ch = curl_init(SB_URL . '/rest/v1/post_views');
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_TIMEOUT        => 2,
+            CURLOPT_CONNECTTIMEOUT => 2,
+        ]);
+        curl_exec($ch);
+    } else {
+        $ctx = stream_context_create(['http' => ['method' => 'POST', 'header' => implode("\r\n", $headers), 'content' => $payload, 'timeout' => 2, 'ignore_errors' => true]]);
+        @file_get_contents(SB_URL . '/rest/v1/post_views', false, $ctx);
+    }
+}

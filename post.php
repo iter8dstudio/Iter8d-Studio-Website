@@ -77,3 +77,10 @@ $out = str_replace('{{CONTENT}}', $content, $out);
 
 header('Content-Type: text/html; charset=utf-8');
 echo $out;
+
+// Count the view after the page has been sent, so readers never wait for it
+if ($post) {
+    if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+    elseif (function_exists('litespeed_finish_request')) litespeed_finish_request();
+    record_view($post['slug']);
+}
